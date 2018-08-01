@@ -1,0 +1,6 @@
+[submodule "novatel_OEM4_python"]
+	path = novatel_OEM4_python
+	url = https://github.com/brtiberio/novatel_OEM4_python.git
+[submodule "RazorIMU_interface_python"]
+	path = RazorIMU_interface_python
+	url = https://github.com/brtiberio/RazorIMU_interface_python.git
