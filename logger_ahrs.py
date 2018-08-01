@@ -232,7 +232,7 @@ def main():
     gps1.setDynamics(0)
     gps2.setDynamics(0)
 
-    # enable augmented sattelitte systems
+    # enable augmented satellite systems
     gps1.sbascontrol()
     gps2.sbascontrol()
 
@@ -245,6 +245,7 @@ def main():
     clean_exit()
     logging.shutdown()
     print('Exiting now')
+
 
 if __name__ == '__main__':
     main()
