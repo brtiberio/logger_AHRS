@@ -1,9 +1,6 @@
 import argparse
 import threading
 import os
-# import sys
-# sys.path.append('./novatel_OEM4_python')
-# sys.path.append('./RazorIMU_interface_python')
 
 from novatel_OEM4_python.NovatelOEM4 import Gps
 from RazorIMU_interface_python.razorIMU import RazorIMU
@@ -17,9 +14,10 @@ from time import sleep
 import signal
 import logging
 
+
 def saveGpsData(dataQueue, fileFP, exitFlag):
     fileFP.write(
-        "Indice,Time,PSolStatus,X,Y,Z,stdX,stdY,stdZ,VSolStatus,VX,VY,VZ,stdVX,stdVY,stdVZ,VLatency,SolAge,SolSatNumber\n")
+        "Index,Time,PSolStatus,X,Y,Z,stdX,stdY,stdZ,VSolStatus,VX,VY,VZ,stdVX,stdVY,stdVZ,VLatency,SolAge,SolSatNumber\n")
     fileFP.flush()
     while(exitFlag.isSet() == False):
         if(dataQueue.empty() == False):
@@ -53,36 +51,37 @@ def saveGpsData(dataQueue, fileFP, exitFlag):
     return
 
 
-def saveRazorData(dataQueue, fileFP, exitFlag):
+def save_razor_data(dataQueue, fileFP, exitFlag):
     fileFP.write(
         "Index,Time,ID,accx,accy,accz,gyrox,gyroy,gyroz,magx,magy,magz,yaw,pitch,roll\n")
     fileFP.flush()
-    while(exitFlag.isSet() == False):
-        if(dataQueue.empty() == False):
-            newData = dataQueue.get()
+    while not exitFlag.isSet():
+        if not dataQueue.empty():
+            new_data = dataQueue.get()
             fileFP.write('{0:5d},{1},{2},{3:.2f},{4:.2f},{5:.2f},{6:.2f},'
                          '{7:.2f},{8:.2f},{9:.2f},{10:.2f},{11:.2f},'
                          '{12:.2f},{13:.2f},{14:.2f}'
-                         '\n'.format(newData['Indice'],
-                                     newData['Time'],
-                                     newData['ID'],
-                                     newData['Acc'][0],
-                                     newData['Acc'][1],
-                                     newData['Acc'][2],
-                                     newData['Gyro'][0],
-                                     newData['Gyro'][1],
-                                     newData['Gyro'][2],
-                                     newData['Mag'][0],
-                                     newData['Mag'][1],
-                                     newData['Mag'][2],
-                                     newData['euler'][0],
-                                     newData['euler'][1],
-                                     newData['euler'][2]
+                         '\n'.format(new_data['Index'],
+                                     new_data['Time'],
+                                     new_data['ID'],
+                                     new_data['Acc'][0],
+                                     new_data['Acc'][1],
+                                     new_data['Acc'][2],
+                                     new_data['Gyro'][0],
+                                     new_data['Gyro'][1],
+                                     new_data['Gyro'][2],
+                                     new_data['Mag'][0],
+                                     new_data['Mag'][1],
+                                     new_data['Mag'][2],
+                                     new_data['euler'][0],
+                                     new_data['euler'][1],
+                                     new_data['euler'][2]
                                      ))
             fileFP.flush()
         else:
             sleep(0.01)
     return
+
 
 def main():
     """
@@ -90,7 +89,7 @@ def main():
     :return:
     """
     def signal_handler(signal, frame):
-        print('You pressed Ctrl+C!')
+        logging.info('You pressed Ctrl+C!')
         razor.shutdown()
         gps1.shutdown()
         gps2.shutdown()
@@ -102,10 +101,10 @@ def main():
         gps2.shutdown()
         razor.shutdown()
         exitFlag.set()
-        razorThreads[0].join()
-        gpsThreads[0].join()
-        gpsThreads[1].join()
-        logging.info("Sucessfully exited from devices")
+        razor_threads[0].join()
+        gps_threads[0].join()
+        gps_threads[1].join()
+        logging.info("Successfully exited from devices")
         return
 
     # --------------------------------------------------------------------------
@@ -131,7 +130,7 @@ def main():
                         choices=['critical', 'error', 'warning', 'info', 'debug'])
     args = parser.parse_args()
 
-    log_Level = {'error': logging.ERROR,
+    log_level = {'error': logging.ERROR,
                  'debug': logging.DEBUG,
                  'info': logging.INFO,
                  'warning': logging.WARNING,
@@ -141,14 +140,14 @@ def main():
     # create folder anc change dir
     # --------------------------------------------------------------------
     os.chdir('..')
-    currentDir = os.getcwd()
-    currentDir = currentDir + "/data/" + args.folder
-    if not os.path.exists(currentDir):
-        os.makedirs(currentDir)
-    os.chdir(currentDir)
+    current_dir = os.getcwd()
+    current_dir = current_dir + "/data/" + args.folder
+    if not os.path.exists(current_dir):
+        os.makedirs(current_dir)
+    os.chdir(current_dir)
     # --------------------------------------------------------------------
     logging.basicConfig(filename=args.log,
-                        level=log_Level[args.logLevel],
+                        level=log_level[args.logLevel],
                         format='[%(asctime)s] [%(name)-20s] [%(threadName)-10s] %(levelname)-8s %(message)s',
                         filemode="w")
 
@@ -156,7 +155,7 @@ def main():
     # define a Handler which writes INFO messages or higher in console
     # ---------------------------------------------------------------------------
     console = logging.StreamHandler()
-    console.setLevel(log_Level[args.logLevel])
+    console.setLevel(log_level[args.logLevel])
     # set a format which is simpler for console use
     formatter = logging.Formatter('%(name)-20s: %(levelname)-8s %(message)s')
     # tell the handler to use this format
@@ -173,8 +172,8 @@ def main():
     gps2 = Gps("GPS2")
 
     # create Thread pointers
-    razorThreads = [0] * 1
-    gpsThreads = [0] * 2
+    razor_threads = [0] * 1
+    gps_threads = [0] * 2
 
     # create inter threads fifos
     razorFifo = queue.Queue()
@@ -187,14 +186,14 @@ def main():
     gps2Fp = open('gps2.csv', 'w')
 
     # declare threads
-    razorThreads[0] = threading.Thread(name="razor", target=saveRazorData,
-                                       args=(razorFifo, razorFp, exitFlag))
-    gpsThreads[0] = threading.Thread(name="gps1", target=saveGpsData,
+    razor_threads[0] = threading.Thread(name="razor", target=save_razor_data,
+                                        args=(razorFifo, razorFp, exitFlag))
+    gps_threads[0] = threading.Thread(name="gps1", target=saveGpsData,
                                      args=(gps1Fifo, gps1Fp, exitFlag))
-    gpsThreads[1] = threading.Thread(name="gps2", target=saveGpsData,
+    gps_threads[1] = threading.Thread(name="gps2", target=saveGpsData,
                                      args=(gps2Fifo, gps2Fp, exitFlag))
 
-    if razor.begin(razorFifo, comPort=args.razor_port) != 1:
+    if razor.begin(razorFifo, com_port=args.razor_port) != 1:
         print("Not able to begin device properly... check logfile")
         return
     if gps1.begin(gps1Fifo, comPort=args.gps1_port) != 1:
@@ -205,9 +204,9 @@ def main():
         return
 
     # start threads
-    razorThreads[0].start()
-    gpsThreads[0].start()
-    gpsThreads[1].start()
+    razor_threads[0].start()
+    gps_threads[0].start()
+    gps_threads[1].start()
     # prepare signal and handlers
     signal.signal(signal.SIGINT, signal_handler)
 
@@ -240,11 +239,11 @@ def main():
     gps1.askLog(trigger=2, period=0.05)
     gps2.askLog(trigger=2, period=0.05)
     # wait for Ctrl-C
-    print('Press Ctrl+C to Exit')
+    logging.info('Press Ctrl+C to Exit')
     signal.pause()
     clean_exit()
+    logging.info('Exiting now')
     logging.shutdown()
-    print('Exiting now')
 
 
 if __name__ == '__main__':
